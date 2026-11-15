@@ -5,11 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"kr1sal.com/avl-converter/internal/utils"
 )
 
-func ReadCSVFiles(path string) ([][][]string, error) {
+func ReadCSVFiles(path string) (map[string][][]string, error) {
 	info, err := os.Stat(path)
 	if err != nil {
 		return nil, err
@@ -20,32 +22,34 @@ func ReadCSVFiles(path string) ([][][]string, error) {
 			return nil, err
 		}
 
-		tables := make([][][]string, len(filepaths))
-		for index, filepath := range filepaths {
-			records, err := ReadCSVFile(filepath)
+		tables := make(map[string][][]string, len(filepaths))
+		for _, filepath := range filepaths {
+			title, records, err := ReadCSVFile(filepath)
 			if err != nil {
 				return nil, err
 			}
-			tables[index] = records
+			tables[title] = records
 		}
 
 		return tables, nil
 	} else if info.Mode().IsRegular() {
-		records, err := ReadCSVFile(path)
+		title, records, err := ReadCSVFile(path)
 		if err != nil {
 			return nil, err
 		}
+		table := map[string][][]string{}
+		table[title] = records
 
-		return [][][]string{records}, nil
+		return table, nil
 	}
 
 	return nil, fmt.Errorf("invalid path: %s", path)
 }
 
-func ReadCSVFile(path string) ([][]string, error) {
+func ReadCSVFile(path string) (string, [][]string, error) {
 	file, err := os.Open(path)
 	if err != nil {
-		return nil, err
+		return "", nil, err
 	}
 	defer file.Close()
 
@@ -55,13 +59,15 @@ func ReadCSVFile(path string) ([][]string, error) {
 
 	records, err := r.ReadAll()
 	if err != nil {
-		return nil, err
+		return "", nil, err
 	}
 
-	return records, nil
+	fileName := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
+
+	return fileName, records, nil
 }
 
-func WriteJSONFile(path string, data [][][]string) error {
+func WriteJSONFile(path string, data map[string][][]string) error {
 	file, err := os.Create(path)
 	if err != nil {
 		return err
@@ -69,11 +75,14 @@ func WriteJSONFile(path string, data [][][]string) error {
 	defer file.Close()
 
 	records := make(map[string][]map[string]string)
-	for tableIndex, table := range data {
-		tableName := fmt.Sprintf("table_%d", tableIndex+1)
-		tableTitles := table[0]
-		tableRecords := make([]map[string]string, len(table)-1)
-		for rowIndex, row := range table[1:] {
+	for tableTitle, tableData := range data {
+		tableName := fmt.Sprintf("%v", tableTitle)
+		if len(tableData) == 0 {
+			continue
+		}
+		tableTitles := tableData[0]
+		tableRecords := make([]map[string]string, len(tableData)-1)
+		for rowIndex, row := range tableData[1:] {
 			recordData := make(map[string]string)
 			for colIndex, col := range row {
 				field := tableTitles[colIndex]

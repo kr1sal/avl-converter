@@ -1,0 +1,26 @@
+{
+  "products": [
+    {
+      "id": "1",
+      "price": "1200",
+      "title": "Laptop"
+    },
+    {
+      "id": "2",
+      "price": "800",
+      "title": "Phone"
+    }
+  ],
+  "users": [
+    {
+      "age": "25",
+      "id": "1",
+      "name": "Alice"
+    },
+    {
+      "age": "30",
+      "id": "2",
+      "name": "Bob"
+    }
+  ]
+}
